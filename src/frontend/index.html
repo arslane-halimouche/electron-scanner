@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Document Scanner</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+
+  <body>
+    <!-- Icono de ajustes (carpeta de destino), fijo arriba a la derecha, visible en todo momento -->
+    <button id="settingsBtn" class="icon-btn" title="Carpeta de destino">⚙️</button>
+
+    <h1><span class="icon-badge">🖨️</span> Escáner de documentos</h1>
+
+    <!-- Inicio: 2 botones -->
+    <div
+      id="homeActions"
+      style="display:flex; gap:10px; flex-wrap:wrap; justify-content:center; margin-bottom:14px;"
+    >
+      <button id="homeScanBtn" class="btn-primary">🔍 Buscar escáneres</button>
+      <button id="homeCameraBtn" class="btn-outline">📷 Usar cámara</button>
+      <button id="homeImportBtn" class="btn-outline">📎 Importar documento</button>
+    </div>
+
+    <!-- Acciones pantalla dispositivos / importación -->
+    <div
+      id="deviceActions"
+      style="display:none; gap:10px; flex-wrap:wrap; justify-content:center; margin-top:14px;"
+    >
+      <button id="refreshDevicesBtn" class="btn-outline">🔄 actualizar</button>
+      <button id="backHomeBtn" class="btn-outline">↩️ Volver</button>
+    </div>
+
+    <div id="devices"></div>
+
+    <div id="scanModeChoice" style="display:none;">
+      <p class="hint" style="margin-top:0; margin-bottom:10px;">Selecciona el modo de escaneo (ADF: hasta 35 hojas)</p>
+      <div style="display:flex; gap:10px; flex-wrap: wrap;">
+        <button id="modeSingleBtn" class="btn-outline">🖼️ Cama plana</button>
+        <button id="modeMultiBtn" class="btn-outline">📚 ADF (varias hojas)</button>
+      </div>
+    </div>
+
+    <div id="result"></div>
+
+    <button
+      id="stopScanBtn"
+      class="btn-outline"
+      style="display:none; border-color:#EF4444; color:#f87171;"
+    >
+      ⏹️ Detener escaneo
+    </button>
+
+    <div id="pages"></div>
+    <p class="hint" id="dragHint" style="display:none;">💡 Arrastra las páginas para reordenarlas</p>
+    <div id="pendingDocs" style="display:none;"></div>
+
+    <!-- Barra de fusión -->
+    <div id="mergeBar" style="display:none;">
+      <span id="mergeCount">0 páginas seleccionadas</span>
+      <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        <button id="mergeConfirmBtn" class="btn-warning">🔗 Fusionar seleccionadas</button>
+        <button id="mergeCancelBtn" class="btn-outline" style="border-color:#EF4444; color:#f87171;">✕ Cancelar</button>
+      </div>
+    </div>
+
+    <!-- Modal de elección de exportación -->
+    <div id="exportModal" style="display:none;">
+      <div id="exportModalInner">
+        <h2>📥 Exportar documento</h2>
+        <p>Selecciona el formato de exportación</p>
+        <div id="exportOptions">
+          <button id="exportPdfSingleBtn" class="btn-primary">
+            📄 Un solo PDF
+            <span class="export-hint">Todas las páginas en 1 archivo</span>
+          </button>
+          <button id="exportZipBtn" class="btn-outline">
+            🗂️ ZIP (PDF por página)
+            <span class="export-hint">Cada página en su propio PDF</span>
+          </button>
+          <button id="exportImagesBtn" class="btn-outline">
+            🖼️ Imágenes (JPEG)
+            <span class="export-hint">Cada página como foto JPEG</span>
+          </button>
+        </div>
+        <button
+          id="exportCancelBtn"
+          class="btn-outline"
+          style="margin-top:10px; width:100%; justify-content:center;"
+        >
+          ✕ Cancelar
+        </button>
+      </div>
+    </div>
+    <div id="exportOverlay" style="display:none;"></div>
+
+    <div id="actions">
+      <button id="scanMoreBtn" class="btn-success">➕ Escanear otra página</button>
+      <button id="mergeSelectBtn" class="btn-outline">🔗 Fusionar páginas</button>
+      <button id="undoBtn" class="btn-outline">↩️ Deshacer</button>
+      <button id="importMoreBtn" class="btn-outline">📎 Importar más</button>
+      <button id="cameraMoreBtn" class="btn-outline">📷 Cámara</button>
+
+      <!-- KnowledgeHub (oculto mientras no haya páginas) -->
+      <button id="sendKnowledgeHubBtn" class="btn-outline" style="display:none;">
+        📤 Enviar a KnowledgeHub
+      </button>
+
+      <button id="downloadPdfBtn" class="btn-primary">📤 Exportar</button>
+      <button id="clearBtn" class="btn-outline">🗑️ Borrar todo</button>
+    </div>
+
+    <!-- Modal de cámara (estilo CamScanner) -->
+    <div id="cameraOverlay" style="display:none;"></div>
+    <div id="cameraModal" style="display:none;">
+      <div id="cameraModalInner">
+        <!-- Vista de cámara en directo -->
+        <div id="cameraLiveView">
+          <video id="cameraVideo" autoplay playsinline></video>
+          <div id="cameraLiveActions">
+            <button id="capturePhotoBtn" class="btn-primary">📸 Capturar</button>
+            <button id="cameraCancelBtn" class="btn-outline">✕ Cerrar</button>
+          </div>
+        </div>
+
+        <!-- Vista de recorte: las 4 esquinas se rellenan previamente por la detección automática -->
+        <div id="cameraCropView" style="display:none;">
+          <div id="cameraDetectingHint" class="hint" style="justify-content:center; display:none;">
+            <div class="spinner"></div> Detectando bordes del documento...
+          </div>
+          <div id="cameraCropContainer">
+            <img id="capturedPhotoImg" />
+            <svg id="cropOverlaySvg"></svg>
+            <div id="cropHandleTL" class="crop-handle"></div>
+            <div id="cropHandleTR" class="crop-handle"></div>
+            <div id="cropHandleBR" class="crop-handle"></div>
+            <div id="cropHandleBL" class="crop-handle"></div>
+          </div>
+          <p class="hint" style="justify-content:center;">💡 Arrastra las 4 esquinas para encuadrar el documento</p>
+          <div id="cameraCropActions">
+            <button id="confirmCropBtn" class="btn-success">✅ Confirmar</button>
+            <button id="retakePhotoBtn" class="btn-outline">🔄 Repetir foto</button>
+            <button id="cameraCropCancelBtn" class="btn-outline">✕ Cerrar</button>
+          </div>
+        </div>
+
+        <!-- Vista de selección de filtro (estilo CamScanner) -->
+        <div id="cameraFilterView" style="display:none;">
+          <div id="cameraFilterPreviewContainer">
+            <img id="filterPreviewImg" />
+          </div>
+          <div id="filterOptions">
+            <button id="filterBwBtn" class="filter-option" data-filter="bw">
+              <span class="filter-icon">⬛</span>
+              <span class="filter-label">Blanco y negro</span>
+              <span class="filter-desc">Texto nítido, fondo blanco puro</span>
+            </button>
+            <button id="filterGrayscaleBtn" class="filter-option" data-filter="grayscale">
+              <span class="filter-icon">🔲</span>
+              <span class="filter-label">Escala de grises</span>
+              <span class="filter-desc">Tonos suaves, sin color</span>
+            </button>
+            <button id="filterColorBtn" class="filter-option" data-filter="color">
+              <span class="filter-icon">🎨</span>
+              <span class="filter-label">Color</span>
+              <span class="filter-desc">Conserva los colores originales</span>
+            </button>
+          </div>
+          <div id="cameraFilterActions">
+            <button id="confirmFilterBtn" class="btn-success">✅ Escanear documento</button>
+            <button id="backToCropBtn" class="btn-outline">↩️ Volver al recorte</button>
+            <button id="cameraFilterCancelBtn" class="btn-outline">✕ Cerrar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Input oculto para importar desde el inicio -->
+    <input
+      id="importFileInput"
+      type="file"
+      accept="image/*,application/pdf"
+      multiple
+      style="display:none;"
+    />
+
+    <!-- Input oculto para "Importar más" (añadir en cualquier momento) -->
+    <input
+      id="importMoreFileInput"
+      type="file"
+      accept="image/*,application/pdf"
+      multiple
+      style="display:none;"
+    />
+
+    <script src="../../node_modules/jspdf/dist/jspdf.umd.min.js"></script>
+    <script src="../../node_modules/jszip/dist/jszip.min.js"></script>
+    <script src="../../dist/src/frontend/app.js"></script>
+  </body>
+</html>
